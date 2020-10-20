@@ -1,0 +1,94 @@
+import libjevois as jevois
+import cv2
+import numpy as np
+ 
+## Simple example of image processing using OpenCV in Python on JeVois
+#
+# This module by default simply converts the input image to a grayscale OpenCV image, and then applies the Canny
+# edge detection algorithm. Try to edit it to do something else (note that the videomapping associated with this
+# module has grayscale image outputs, so that is what you should output).
+#
+# @author Laurent Itti
+# 
+# @displayname Python Tutorial 1
+# @videomapping GRAY 640 480 20.0 YUYV 640 480 20.0 JeVois PythonOpenCV
+# @email itti\@usc.edu
+# @address University of Southern California, HNB-07A, 3641 Watt Way, Los Angeles, CA 90089-2520, USA
+# @copyright Copyright (C) 2017 by Laurent Itti, iLab and the University of Southern California
+# @mainurl http://jevois.org
+# @supporturl http://jevois.org/doc
+# @otherurl http://iLab.usc.edu
+# @license GPL v3
+# @distribution Unrestricted
+# @restrictions None
+# @ingroup modules
+class Hello:
+    # ###################################################################################################
+    ## Constructor
+    def __init__(self):
+        self.morphBNo2 = 2
+        
+        # Instantiate a JeVois Timer to measure our processing framerate:
+        self.timer = jevois.Timer("dice", 50, jevois.LOG_DEBUG)
+ 
+        # Instantiate a circular blob detector:
+        params = cv2.SimpleBlobDetector_Params()
+        params.filterByCircularity = True
+        params.filterByArea = True
+        params.minArea = 200.0
+ 
+        self.detector = cv2.SimpleBlobDetector_create(params)
+ 
+        # Create a morpho kernel (this was not in the original code?)
+        self.kernel = np.ones((5,5), np.uint8)
+        
+    # ###################################################################################################
+    ## Process function with no USB output
+    #def processNoUSB(self, inframe):
+    #    jevois.LFATAL("process no usb not implemented")
+ 
+    # ###################################################################################################
+    ## Process function with USB output
+    def process(self, inframe, outframe):
+        # Get the next camera image (may block until it is captured) and convert it to OpenCV BGR (for color output):
+        img = inframe.getCvBGR()
+ 
+        # Also convert it to grayscale for processing:
+        grayImage = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        
+        # Get image width, height:
+        height, width = grayImage.shape
+ 
+        # Start measuring image processing time (NOTE: does not account for input conversion time):
+        self.timer.start()
+ 
+        # filter noise
+        grayImage = cv2.GaussianBlur(grayImage, (5, 5), 0, 0)
+ 
+        # apply automatic threshold
+        ret, grayImage = cv2.threshold(grayImage, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+ 
+        # background area
+        grayImage = cv2.dilate(grayImage, self.kernel, iterations = 1) #self.morphBNo2)
+        invBack2 = 255 - grayImage
+ 
+        # blob detection
+        keypoints = self.detector.detect(invBack2)
+        nrOfBlobs = len(keypoints)
+ 
+        # draw keypoints
+        img_with_keypoints = cv2.drawKeypoints(img, keypoints, np.array([]), (0, 0, 255),
+                                              cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)#(B,G,R)
+ 
+        # text only appears if at least 1 blob is detected
+        if nrOfBlobs > 0:
+            cv2.putText(img_with_keypoints, "Objs Detected: {}".format(nrOfBlobs), (10, 25), cv2.FONT_HERSHEY_PLAIN,
+                        2, (0, 255, 255, 255))
+ 
+        # Write frames/s info from our timer (NOTE: does not account for output conversion time):
+        fps = self.timer.stop()
+        cv2.putText(img_with_keypoints, fps, (3, height - 6), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+                    (255,255,255), 1, cv2.LINE_AA)
+    
+        # Convert our BGR image to video output format and send to host over USB:
+        outframe.sendCvBGR(img_with_keypoints)
