@@ -1,0 +1,185 @@
+import libjevois as jevois
+import cv2
+import numpy as np
+import time
+
+
+## Simple example of image processing using OpenCV in Python on JeVois
+#
+# This module by default simply converts the input image to a grayscale OpenCV image, and then applies the Canny
+# edge detection algorithm. Try to edit it to do something else (note that the videomapping associated with this
+# module has grayscale image outputs, so that is what you should output).
+#
+# @author Laurent Itti
+# @Modifying author: Adriane Almiranez
+# ***10/1/21***
+# @displayname Python Tutorial 1
+# @videomapping GRAY 640 480 20.0 YUYV 640 480 20.0 JeVois PythonOpenCV
+# @email itti\@usc.edu
+# @address University of Southern California, HNB-07A, 3641 Watt Way, Los Angeles, CA 90089-2520, USA
+# @copyright Copyright (C) 2017 by Laurent Itti, iLab and the University of Southern California
+# @mainurl http://jevois.org
+# @supporturl http://jevois.org/doc
+# @otherurl http://iLab.usc.edu
+# @license GPL v3
+# @distribution Unrestricted
+# @restrictions None
+# @ingroup modules
+#Based off of:
+    # https://www.programcreek.com/python/example/83399/cv2.putText
+    # http://jevois.org/tutorials/ProgrammerPythonDice.html
+
+timer = time.monotonic()
+delay = 5
+class DistanceMeasure:
+    
+    def __init__(self):
+        self.morphBNo2 = 2
+
+        # Instantiate a JeVois Timer to measure our processing framerate:
+        self.timer = jevois.Timer("dice", 50, jevois.LOG_DEBUG)
+ 
+        # Instantiate a circular blob detector:
+        params = cv2.SimpleBlobDetector_Params()
+        params.filterByCircularity = True
+        #params.minCircularity = .5
+        params.filterByArea = True
+        params.minArea = 200
+        #params.filterByConvexity = True
+        #params.minConvexity = .95
+        params.minThreshold = 1
+        params.maxThreshold = 200
+        self.detector = cv2.SimpleBlobDetector_create(params)
+ 
+        # Create a morpho kernel (this was not in the original code?)
+        self.kernel = np.ones((5,5), np.uint8)
+        
+    # ###################################################################################################
+    # Process function with no USB output
+    def processNoUSB(self, inframe):
+        jevois.LFATAL("process no usb not implemented")
+ 
+    # ###################################################################################################
+    # Process function with USB output
+    def process(self, inframe, outframe):
+        # Get the next camera image (may block until it is captured) and convert it to OpenCV BGR (for color output):
+        img = inframe.getCvBGR()
+        
+ #-----Image Processing----------------------------------
+ 
+        # Also convert it to grayscale for processing:
+        grayImage = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        
+        # Get image width, height:
+        height, width = grayImage.shape
+ 
+        # Start measuring image processing time (NOTE: does not account for input conversion time):
+        self.timer.start()
+ 
+        # filter noise
+        grayImage = cv2.GaussianBlur(grayImage, (5, 5), 0, 0)
+ 
+        # apply automatic threshold
+        ret, grayImage = cv2.threshold(grayImage, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+ 
+        # background area
+        grayImage = cv2.dilate(grayImage, self.kernel, iterations = 1) #self.morphBNo2)
+        invBack2 = 255 - grayImage
+        
+ #-----Blob Detection----------------------------------
+        
+        # blob detection
+        keypoints = self.detector.detect(invBack2)
+        nrOfBlobs = len(keypoints) #number of items in this object
+        
+        # draw keypoints
+        img_with_keypoints = cv2.drawKeypoints(img, keypoints, np.array([]), (255, 0, 0),
+                                              cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)#(B,G,R)
+        # draw coordinate system overlay
+        cv2.line(img_with_keypoints, (0,int(height/2)), (int(width), int(height/2)), (0,0,255), 1) #x line
+        cv2.line(img_with_keypoints, (int(width/2),0), (int(width/2), int(height)), (255,0,0), 1) #y line
+  
+ #-----On Screen Text----------------------------------
+ 
+        # text only appears if at least 1 blob is detected
+        if nrOfBlobs > 0:
+            i = 0
+            # Keypoint calculations
+            x = keypoints[i].pt[0]
+            y = keypoints[i].pt[1]
+            x_center = -x + (width/2)      #160 = 1/2 of screen width
+            y_center = y - (height/2)     #120 = 1/2 of screen length
+            
+            area = keypoints[i].size    #Pixel area and distance are inversely related
+            dist = ((1/area)*1000)-2        # Still needs conversion rate
+            
+            color_cntrl = 255
+            if int(x_center) == 0 and int(y_center) == 0 :
+                cv2.putText(img_with_keypoints, "Centered!".format(int(dist)),  (10, 55), cv2.FONT_HERSHEY_PLAIN,
+                        .75, (0, 255, 0, 0))
+                cv2.line(img_with_keypoints, (0,int(height/2)), (int(width), int(height/2)), (0,255,0), 2) #x line
+                cv2.line(img_with_keypoints, (int(width/2),0), (int(width/2), int(height)), (0,255,0), 2) #y line
+                color_cntrl = 0
+                
+            else:
+                color_cntrl = 255
+                
+            cv2.putText(img_with_keypoints, "Dist: {} cm".format(int(dist)),  (10, 25), cv2.FONT_HERSHEY_PLAIN,
+                        1, (0, 255, color_cntrl, color_cntrl))
+            cv2.putText(img_with_keypoints, "X: {}".format(int(x_center)), (10, 35), cv2.FONT_HERSHEY_PLAIN,
+                        .75, (0, 255, color_cntrl, color_cntrl))
+            cv2.putText(img_with_keypoints, "Y: {}".format(int(y_center)), (10, 45), cv2.FONT_HERSHEY_PLAIN,
+                        .75, (0, 255, color_cntrl, color_cntrl))
+                        
+        # Write frames/s info from our timer (NOTE: does not account for output conversion time):
+        fps = self.timer.stop()
+        cv2.putText(img_with_keypoints, fps, (3, height - 6), cv2.FONT_HERSHEY_SIMPLEX, 0.25,
+                    (255,255,255), 1, cv2.LINE_AA)
+    
+        # Convert our BGR image to video output format and send to host over USB:
+        outframe.sendCvBGR(img_with_keypoints)
+                                                
+ #-----Serial Interfacing----------------------------------
+        interval = time.monotonic() - timer
+        # Testing if variable is first defined to prevent errors
+        try:
+            dist
+            x_center
+            y_center
+        except NameError:
+            print("WELL WELL. These were not defined after all")
+            #jevois.sendSerial('Target Not recognized')
+        else:
+                print("These are defined and ready to go!")
+            
+                conv_dist = str(int(dist))
+                conv_x = str(int(x_center))
+                conv_y = str(int(y_center))
+                datasend = [conv_dist,conv_x,conv_y]
+            
+                #jevois.sendSerial(str(int(x_center)))
+                #jevois.sendSerial("x")
+                #jevois.sendSerial(str(int(y_center)))
+                #jevois.sendSerial("x")
+                #jevois.sendSerial(str(dist))
+                #jevois.sendSerial("x")
+                
+                jevois.sendSerial('{}x{}'.format(conv_x,conv_y))
+                
+                #conv_dist = (int(dist))
+                #conv_x = (int(x))
+                #conv_y = (int(y))
+                #datasend = [conv_dist,conv_x,conv_y]
+                #sdata = bytearray(datasend)
+                
+                #jevois.LINFO('dist type is {}'.format(type(conv_dist)))
+                #jevois.LINFO('x type is {}'.format(type(conv_x)))
+                #jevois.LINFO('y type is {}'.format(type(conv_y)))
+                
+                #jevois.sendSerial('Target Coordinates: {}'.format(datasend))
+                ##jevois.sendSerial(str(x_center))
+                #jevois.sendSerial('Distance from target: {}'.format(conv_dist))
+                #jevois.sendSerial('X Coordinate: {}'.format(conv_x))
+                #jevois.sendSerial('Y Coordinate: {}'.format(conv_y))
+                
+
