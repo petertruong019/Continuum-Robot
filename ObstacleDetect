@@ -1,0 +1,74 @@
+import libjevois as jevois
+#from imutils import paths
+import numpy as np
+import argparse
+import glob
+import cv2
+
+## Simple example of image processing using OpenCV in Python on JeVois
+#
+# This module by default simply converts the input image to a grayscale OpenCV image, and then applies the Canny
+# edge detection algorithm. Try to edit it to do something else (note that the videomapping associated with this
+# module has grayscale image outputs, so that is what you should output).
+#
+# @author Laurent Itti
+# 
+# @displayname Python Tutorial 1
+# @videomapping GRAY 640 480 20.0 YUYV 640 480 20.0 JeVois PythonOpenCV
+# @email itti\@usc.edu
+# @address University of Southern California, HNB-07A, 3641 Watt Way, Los Angeles, CA 90089-2520, USA
+# @copyright Copyright (C) 2017 by Laurent Itti, iLab and the University of Southern California
+# @mainurl http://jevois.org
+# @supporturl http://jevois.org/doc
+# @otherurl http://iLab.usc.edu
+# @license GPL v3
+# @distribution Unrestricted
+# @restrictions None
+# @ingroup modules
+class ObstacleDetect:
+    # ###################################################################################################
+    ## Constructor
+    def __init__(self):
+        # Instantiate a JeVois Timer to measure our processing framerate:
+        self.timer = jevois.Timer("sandbox", 100, jevois.LOG_INFO)
+    
+    ## Process function with USB output
+    def process(self, inframe, outframe):
+        
+        #Start fps timer
+        self.timer.start()
+        
+        sigma = 0.33
+        
+        # Get the next camera image (may block until it is captured) and convert it to OpenCV GRAY:
+        gray = inframe.getCvGRAY()
+        inimggray = cv2.GaussianBlur(gray, (5, 5), 0)
+
+        # compute the median of the single channel pixel intensities
+        median = np.median(inimggray)
+        
+        # apply automatic Canny edge detection using the computed median
+        lower = int(max(0, (1.0 - sigma) * median))
+        upper = int(min(255, (1.0 + sigma) * median))
+        
+        
+        # Detect edges using the Canny algorithm from OpenCV:
+        #edged = cv2.Canny(inimggray, lower, upper, apertureSize = 3)
+        edged = cv2.Canny(gray, 35, 125, apertureSize = 3)
+        
+        
+     ## Text Overlay -----------------------------------------------------------------
+        
+        # Write a title:
+        cv2.putText(edged, "Edge Detect Algorithm", (3, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255),
+                    1, cv2.LINE_AA)
+                    
+        # Write FPS
+        fps = self.timer.stop()
+        height, width = edged.shape # if outimg is grayscale, change to: height, width = outimg.shape
+        cv2.putText(edged, fps, (3, height - 6), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255,255,255), 1, cv2.LINE_AA)
+        
+        
+        # Convert our GRAY output image to video output format and send to host over USB:
+        outframe.sendCvGRAY(edged)
+        
