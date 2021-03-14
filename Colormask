@@ -14,9 +14,34 @@ import time
 # @address 123 first street, Los Angeles CA 90012, USA
 # @copyright Copyright (C) 2018 by Adriane Almiranez
 
-
+#target = "red"
+#target = "green"
+#target = "blue"
+jevois.sendSerial("Startup Complete");
 
 class ColorMask:
+    target = None
+    # ###################################################################################################
+    def parseSerial(self, str):
+        jevois.LINFO("parseserial received command [{}]".format(str))
+        if str == "hello":
+            return self.hello()
+        if str == "red":
+            self.target = "red"
+            #return self.red()
+        elif str == "green":
+            self.target = "green"
+            #return self.green()
+        elif str == "blue":
+            self.target = "blue"
+            #return self.blue()
+        return "ERR Unsupported command"
+        
+    # ###################################################################################################
+    ## Internal method that gets invoked as a custom command
+    def hello(self):
+        return "Hello from python!"
+        
     # ###################################################################################################
     ## Constructor
     def __init__(self):
@@ -42,21 +67,22 @@ class ColorMask:
         # Get the next camera image (may block until it is captured) and here convert it to OpenCV BGR. If you need a
         # grayscale image, just use getCvGRAY() instead of getCvBGR(). Also supported are getCvRGB() and getCvRGBA():
         inimg = inframe.getCvBGR()
-        
         # Get image width, height:
         height, width, depth = inimg.shape
-        
         # Start measuring image processing time (NOTE: does not account for input conversion time):
         self.timer.start()
-        
         # filter noise
         blur = cv2.GaussianBlur(inimg, (3, 3), 0, 0)
         hsv = cv2.cvtColor(blur, cv2.COLOR_BGR2HSV)
         #blur = cv2.Laplacian(hsv, -1, ksize=5, scale=0.25, delta=127)
         
-        #target = "red"
-        target = "green"
+
+        
+        target = self.target
+        #target = "green"
         #target = "blue"
+        if target is None:
+            target = "green"
         
         if target == "red":
             lower=np.array([0,150,0],np.uint8)
@@ -72,25 +98,19 @@ class ColorMask:
         mask = cv2.dilate(mask, None, iterations=1)
         res = cv2.bitwise_and(inimg, inimg, mask = mask)
         
-        
-        ### Addition of Distance Detect---------------------------------------------------------------------
-        ### Addition of Distance Detect---------------------------------------------------------------------
-        ### Addition of Distance Detect---------------------------------------------------------------------
+### Addition of Distance Detect---------------------------------------------------------------------
+### Addition of Distance Detect---------------------------------------------------------------------
+### Addition of Distance Detect---------------------------------------------------------------------
         
         #-----Image Processing----------------------------------
- 
         # Also convert it to grayscale for processing:
         grayImage = cv2.cvtColor(res, cv2.COLOR_BGR2GRAY)
-        
         # filter noise
         grayImage = cv2.GaussianBlur(grayImage, (3, 3), 0, 0)
-        
         # filter noise
         grayImage = cv2.blur(grayImage, (5, 5))
-        
         # apply automatic threshold
         ret, grayImage = cv2.threshold(grayImage, 127, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
- 
         # background area
         grayImage = cv2.dilate(grayImage, self.kernel, iterations = 1) #self.morphBNo2)
         invBack2 = 255 - grayImage
@@ -108,9 +128,7 @@ class ColorMask:
         
         cv2.line(img_with_keypoints, (0,int(height/2)), (int(width), int(height/2)), (0,0,255), 1) #x line
         cv2.line(img_with_keypoints, (int(width/2),0), (int(width/2), int(height)), (255,0,0), 1) #y line
-  
-        #-----On Screen Text----------------------------------
- 
+        
         # text only appears if at least 1 blob is detected
         if nrOfBlobs > 0:
             i = 0
@@ -122,15 +140,14 @@ class ColorMask:
             
             area = keypoints[i].size    #Pixel area and distance are inversely related
             dist = ((1/area)*1000)-2        # Still needs conversion rate
-            
             color_cntrl = 255
+            
+            #-----On Screen Text----------------------------------
             if int(x_center) == 0 and int(y_center) == 0 :
-                cv2.putText(img_with_keypoints, "Centered!".format(int(dist)),  (10, 55), cv2.FONT_HERSHEY_PLAIN,
-                        .75, (0, 255, 0, 0))
+                cv2.putText(img_with_keypoints, "Centered!".format(int(dist)),  (10, 55), cv2.FONT_HERSHEY_PLAIN,.75, (0, 255, 0, 0))
                 cv2.line(img_with_keypoints, (0,int(height/2)), (int(width), int(height/2)), (0,255,0), 2) #x line
                 cv2.line(img_with_keypoints, (int(width/2),0), (int(width/2), int(height)), (0,255,0), 2) #y line
                 color_cntrl = 0
-                
             else:
                 color_cntrl = 255
                 
@@ -149,17 +166,13 @@ class ColorMask:
         vertstack1 = np.vstack((inimg, hsv))
         vertstack2 = np.vstack((img_with_keypoints, res))
         quadstack = np.hstack((vertstack1, vertstack2))
-        
         outimg = quadstack
-        #outimg = mask
-        #outimg = grayImage
         
         # Write panel labels:
         cv2.putText(outimg, "Raw img", (3, 40), cv2.FONT_HERSHEY_DUPLEX, 1, (255,255,255))
         cv2.putText(outimg, "Obj Detect", (340, 40), cv2.FONT_HERSHEY_DUPLEX, 1, (255,255,255))
         cv2.putText(outimg, "blur", (3, 280), cv2.FONT_HERSHEY_DUPLEX, 1, (255,255,255))
         cv2.putText(outimg, "Color Mask", (340, 280), cv2.FONT_HERSHEY_DUPLEX, 1, (255,255,255))
-        
         # Write frames/s info from our timer into the edge map (NOTE: does not account for output conversion time):
         fps = self.timer.stop()
         height = outimg.shape[0]
@@ -168,10 +181,6 @@ class ColorMask:
         
         # Convert our output image to video output format and send to host over USB:
         outframe.sendCv(outimg)
-
-        # Example of sending some serial output message:
-        jevois.sendSerial("DONE frame {}".format(self.frame));
-        self.frame += 1
         
     # ###################################################################################################
     ## Process function with no USB output
@@ -195,25 +204,20 @@ class ColorMask:
         fps = self.timer.stop()
 
         # Send a serial output message:
-        jevois.sendSerial("DONE frame {} - {}".format(self.frame, fps));
-        self.frame += 1
+        #jevois.sendSerial("DONE frame {} - {}".format(self.frame, fps));
+        #self.frame += 1
         
     # ###################################################################################################
-    ## Parse a serial command forwarded to us by the JeVois Engine, return a string
-    def parseSerial(self, str):
-        jevois.LINFO("parseserial received command [{}]".format(str))
-        if str == "hello":
-            return self.hello()
-        return "ERR Unsupported command"
-    
-    # ###################################################################################################
-    ## Return a string that describes the custom commands we support, for the JeVois help message
+    ### Lets user know what commands are available
     def supportedCommands(self):
         # use \n seperator if your module supports several commands
-        return "hello - print hello using python"
-
-    # ###################################################################################################
-    ## Internal method that gets invoked as a custom command
-    def hello(self):
-        return "Hello from python!"
+        return '''
+        hello - print hello using python
         
+        red - Jevois will search for red objects
+        
+        green - Jevois will search for green objects
+        
+        blue - Jevois will search for blue object
+        
+       '''
