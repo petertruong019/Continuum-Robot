@@ -21,21 +21,38 @@ import numpy as np
 # @ingroup modules
 class ContinuumRoboticsMasterModule:
     target = None
+    state = None
     # ###################################################################################################
     def parseSerial(self, str):
         jevois.LINFO("parseserial received command [{}]".format(str))
+    # Says hello for hospitality purposes 
         if str == "hello":
             return self.hello()
-        if str == "red":
+    # Sets the color to search for in the Color Mask Algorithm
+        elif str == "red":
             self.target = "red"
-            #return self.red()
+            return "Searching for Red!"
         elif str == "green":
             self.target = "green"
-            #return self.green()
+            return "Searching for Green!"
         elif str == "blue":
             self.target = "blue"
-            #return self.blue()
-        return "ERR Unsupported command"
+            return "Searching for Blue!"
+    # takes the state name and sets (DOES NOT reflect finalized demo states)
+        elif str == "calibration":
+            self.state = "calibration"
+            return "Calibration State Active"
+        elif str == "obstacle":
+            self.state = "obstacle"
+            return "Obstacle State Active"
+        elif str == "target":
+            self.state = "target"
+            return "Target State Active"
+        elif str == "confirm":
+            self.state = "confirm"
+            return "Confirmation State Active"
+    # If any of the received commands are unrecognized
+        #return "ERR Unsupported command"
         
     # ###################################################################################################
     ## Internal method that gets invoked as a custom command
@@ -47,7 +64,7 @@ class ContinuumRoboticsMasterModule:
     def __init__(self):
         # Instantiate a JeVois Timer to measure our processing framerate:
         self.timer = jevois.Timer("processing timer", 100, jevois.LOG_INFO)
-        
+        state = "target"
         # a simple frame counter used to demonstrate sendSerial():
         self.frame = 0
         
@@ -64,119 +81,286 @@ class ContinuumRoboticsMasterModule:
     # ###################################################################################################
     ## Process function with USB output
     def process(self, inframe, outframe):
-        # Get the next camera image (may block until it is captured) and here convert it to OpenCV BGR. If you need a
-        # grayscale image, just use getCvGRAY() instead of getCvBGR(). Also supported are getCvRGB() and getCvRGBA():
-        inimg = inframe.getCvBGR()
-        # Get image width, height:
-        height, width, depth = inimg.shape
-        # Start measuring image processing time (NOTE: does not account for input conversion time):
-        self.timer.start()
-        # filter noise
-        blur = cv2.GaussianBlur(inimg, (3, 3), 0, 0)
-        hsv = cv2.cvtColor(blur, cv2.COLOR_BGR2HSV)
-        #blur = cv2.Laplacian(hsv, -1, ksize=5, scale=0.25, delta=127)
+        #state = "calibration"
         
-        target = self.target
-        if target is None:
-            target = "green"
-        
-        if target == "red":
-            lower=np.array([0,150,0],np.uint8)
-            upper=np.array([10,255,255],np.uint8)
-        elif target == "green":
-            lower = np.array([40,150,0],np.uint8)
-            upper = np.array([80,255,255],np.uint8)
-        elif target == "blue":
-            lower = np.array([100,150,0],np.uint8)
-            upper = np.array([140,255,255],np.uint8)
-            
-        mask = cv2.inRange(hsv, lower, upper)
-        mask = cv2.dilate(mask, None, iterations=1)
-        res = cv2.bitwise_and(inimg, inimg, mask = mask)
-        
-### Addition of Distance Detect---------------------------------------------------------------------
-### Addition of Distance Detect---------------------------------------------------------------------
-### Addition of Distance Detect---------------------------------------------------------------------
-        
+        state = self.state
+        if state is None:
+            state = "calibration"
+### Calibration State -----------------------------------------------------------------------------------------------------------
+        if state == "calibration":
+            # Get the next camera image (may block until it is captured) and convert it to OpenCV BGR (for color output):
+            img = inframe.getCvBGR()
         #-----Image Processing----------------------------------
-        # Also convert it to grayscale for processing:
-        grayImage = cv2.cvtColor(res, cv2.COLOR_BGR2GRAY)
-        # filter noise
-        grayImage = cv2.GaussianBlur(grayImage, (3, 3), 0, 0)
-        # filter noise
-        grayImage = cv2.blur(grayImage, (5, 5))
-        # apply automatic threshold
-        ret, grayImage = cv2.threshold(grayImage, 127, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-        # background area
-        grayImage = cv2.dilate(grayImage, self.kernel, iterations = 1) #self.morphBNo2)
-        invBack2 = 255 - grayImage
-        
-        #-----Blob Detection--------------------------------------------------------------------------------
-        
-        # blob detection
-        keypoints = self.detector.detect(grayImage)
-        nrOfBlobs = len(keypoints) #number of items in this object
-        
-        # draw keypoints
-        img_with_keypoints = cv2.drawKeypoints(inimg, keypoints, np.array([]), (255, 0, 0),
-                                              cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)#(B,G,R)
-        # draw coordinate system overlay
-        
-        cv2.line(img_with_keypoints, (0,int(height/2)), (int(width), int(height/2)), (0,0,255), 1) #x line
-        cv2.line(img_with_keypoints, (int(width/2),0), (int(width/2), int(height)), (255,0,0), 1) #y line
-        
-        # text only appears if at least 1 blob is detected
-        if nrOfBlobs > 0:
-            i = 0
-            # Keypoint calculations
-            x = keypoints[i].pt[0]
-            y = keypoints[i].pt[1]
-            x_center = -x + (width/2)      #160 = 1/2 of screen width
-            y_center = y - (height/2)     #120 = 1/2 of screen length
+            # Also convert it to grayscale for processing:
+            grayImage = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             
-            area = keypoints[i].size    #Pixel area and distance are inversely related
-            dist = ((1/area)*1000)-2        # Still needs conversion rate
-            color_cntrl = 255
+            # Get image width, height:
+            height, width = grayImage.shape
+     
+            # Start measuring image processing time (NOTE: does not account for input conversion time):
+            self.timer.start()
+     
+            # filter noise
+            grayImage = cv2.GaussianBlur(grayImage, (5, 5), 0, 0)
+     
+            # apply automatic threshold
+            ret, grayImage = cv2.threshold(grayImage, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+     
+            # background area
+            grayImage = cv2.dilate(grayImage, self.kernel, iterations = 1) #self.morphBNo2)
+            invBack2 = 255 - grayImage
             
-            #-----On Screen Text----------------------------------
-            if int(x_center) == 0 and int(y_center) == 0 :
-                cv2.putText(img_with_keypoints, "Centered!".format(int(dist)),  (10, 55), cv2.FONT_HERSHEY_PLAIN,.75, (0, 255, 0, 0))
-                cv2.line(img_with_keypoints, (0,int(height/2)), (int(width), int(height/2)), (0,255,0), 2) #x line
-                cv2.line(img_with_keypoints, (int(width/2),0), (int(width/2), int(height)), (0,255,0), 2) #y line
-                color_cntrl = 0
+        #-----Blob Detection----------------------------------
+            
+            # blob detection
+            keypoints = self.detector.detect(invBack2)
+            nrOfBlobs = len(keypoints) #number of items in this object
+            
+            # draw keypoints
+            img_with_keypoints = cv2.drawKeypoints(img, keypoints, np.array([]), (255, 0, 0),
+                                                  cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)#(B,G,R)
+            # draw coordinate system overlay
+            cv2.line(img_with_keypoints, (0,int(height/2)), (int(width), int(height/2)), (0,0,255), 1) #x line
+            cv2.line(img_with_keypoints, (int(width/2),0), (int(width/2), int(height)), (255,0,0), 1) #y line
+      
+        #-----On Screen Text----------------------------------
+     
+            # text only appears if at least 1 blob is detected
+            if nrOfBlobs > 0:
+                i = 0
+                # Keypoint calculations
+                x = keypoints[i].pt[0]
+                y = keypoints[i].pt[1]
+                x_center = -x + (width/2)      #160 = 1/2 of screen width
+                y_center = y - (height/2)     #120 = 1/2 of screen length
+                
+                area = keypoints[i].size    #Pixel area and distance are inversely related
+                dist = ((1/area)*1000)-2        # Still needs conversion rate
+                
+                color_cntrl = 255
+                if int(x_center) == 0 and int(y_center) == 0 :
+                    cv2.putText(img_with_keypoints, "Centered!".format(int(dist)),  (10, 55), cv2.FONT_HERSHEY_PLAIN,
+                            .75, (0, 255, 0, 0))
+                    cv2.line(img_with_keypoints, (0,int(height/2)), (int(width), int(height/2)), (0,255,0), 2) #x line
+                    cv2.line(img_with_keypoints, (int(width/2),0), (int(width/2), int(height)), (0,255,0), 2) #y line
+                    color_cntrl = 0
+                    
+                else:
+                    color_cntrl = 255
+                    
+                cv2.putText(img_with_keypoints, "Dist: {} cm".format(int(dist)),  (10, 25), cv2.FONT_HERSHEY_PLAIN,
+                            1, (0, 255, color_cntrl, color_cntrl))
+                cv2.putText(img_with_keypoints, "X: {}".format(int(x_center)), (10, 35), cv2.FONT_HERSHEY_PLAIN,
+                            .75, (0, 255, color_cntrl, color_cntrl))
+                cv2.putText(img_with_keypoints, "Y: {}".format(int(y_center)), (10, 45), cv2.FONT_HERSHEY_PLAIN,
+                            .75, (0, 255, color_cntrl, color_cntrl))
+                            
+            # Write frames/s info from our timer (NOTE: does not account for output conversion time):
+            fps = self.timer.stop()
+            cv2.putText(img_with_keypoints, fps, (3, height - 6), cv2.FONT_HERSHEY_SIMPLEX, 0.25,
+                        (255,255,255), 1, cv2.LINE_AA)
+            # Write Serial input
+            str = "null"
+            cv2.putText(img_with_keypoints, str, (3, height - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.25,
+                        (255,255,255), 1, cv2.LINE_AA)
+                        
+            # Convert our BGR image to video output format and send to host over USB:
+            quadstack = np.hstack((img, img_with_keypoints))
+            outframe.sendCvBGR(quadstack)
+                                                    
+     #-----Serial Interfacing----------------------------------
+            # Testing if variable is first defined to prevent errors
+            try:
+                dist
+                x_center
+                y_center
+            except NameError:
+                print("WELL WELL. These were not defined after all")
+                #jevois.sendSerial('Target Not recognized')
             else:
+                print("These are defined and ready to go!")
+            
+                #conv_dist = str(int(dist))
+                #conv_x = str(int(x_center))
+                #conv_y = str(int(y_center))
+                #datasend = [conv_dist,conv_x,conv_y]
+                
+                #jevois.sendSerial('{}x{}'.format(conv_x,conv_y))
+                
+### Obstacle State -----------------------------------------------------------------------------------------------------------
+        if state == "obstacle":
+        
+            # Setup BlobDetector
+            detector = cv2.SimpleBlobDetector_create()
+            params = cv2.SimpleBlobDetector_Params()
+            # Filter by Area.
+            params.filterByArea = True
+            params.minArea = 200
+            params.maxArea = 40000
+            # Filter by Circularity
+            params.filterByCircularity = True
+            params.minCircularity = 0.5
+            # Filter by Convexity
+            params.filterByConvexity = False
+            #params.minConvexity = 0.87
+            # Filter by Inertia
+            params.filterByInertia = True
+            params.minInertiaRatio = 0.8
+            # Distance Between Blobs
+            params.minDistBetweenBlobs = 20000
+            # Create a detector with the parameters
+            detector = cv2.SimpleBlobDetector_create(params)
+            
+            # Get the next camera image (may block until it is captured) and here convert it to OpenCV BGR. If you need a
+            # grayscale image, just use getCvGRAY() instead of getCvBGR(). Also supported are getCvRGB() and getCvRGBA():
+            inimg = inframe.getCvBGR()
+            overlay = inimg
+            
+            # Start measuring image processing time (NOTE: does not account for input conversion time):
+            self.timer.start()
+            
+            keypoints = detector.detect(inimg)
+            for k in keypoints:
+                cv2.circle(overlay, (int(k.pt[0]), int(k.pt[1])), int(k.size/2), (0, 0, 255), -1)
+                cv2.line(overlay, (int(k.pt[0])-20, int(k.pt[1])), (int(k.pt[0])+20, int(k.pt[1])), (0,0,0), 3)
+                cv2.line(overlay, (int(k.pt[0]), int(k.pt[1])-20), (int(k.pt[0]), int(k.pt[1])+20), (0,0,0), 3)
+    
+            opacity = 0.9
+            cv2.addWeighted(overlay, opacity, inimg, 1 - opacity, 0, inimg)
+    
+            # Uncomment to resize to fit output window if needed
+            #im = cv2.resize(im, None,fx=0.5, fy=0.5, interpolation = cv2.INTER_CUBIC)
+    
+            # Write a title:
+            cv2.putText(overlay, "JeVois ObstacleDetect2", (3, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255))
+            
+            # Write frames/s info from our timer into the edge map (NOTE: does not account for output conversion time):
+            fps = self.timer.stop()
+            height = overlay.shape[0]
+            width = overlay.shape[1]
+            cv2.putText(overlay, fps, (3, height - 6), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255))
+            
+            # Convert our output image to video output format and send to host over USB:
+            quadstack = np.hstack((inimg, overlay))
+            outframe.sendCvBGR(quadstack)
+            
+### Target Search State ---------------------------------------------------------------------------------------------------------------
+        if state == "target":
+            # Get the next camera image (may block until it is captured) and here convert it to OpenCV BGR. If you need a
+            # grayscale image, just use getCvGRAY() instead of getCvBGR(). Also supported are getCvRGB() and getCvRGBA():
+            inimg = inframe.getCvBGR()
+            # Get image width, height:
+            height, width, depth = inimg.shape
+            # Start measuring image processing time (NOTE: does not account for input conversion time):
+            self.timer.start()
+            # filter noise
+            blur = cv2.GaussianBlur(inimg, (3, 3), 0, 0)
+            hsv = cv2.cvtColor(blur, cv2.COLOR_BGR2HSV)
+            #blur = cv2.Laplacian(hsv, -1, ksize=5, scale=0.25, delta=127)
+            
+            target = self.target
+            if target is None:
+                target = "green"
+            
+            if target == "red":
+                lower=np.array([0,150,0],np.uint8)
+                upper=np.array([10,255,255],np.uint8)
+            elif target == "green":
+                lower = np.array([40,150,0],np.uint8)
+                upper = np.array([80,255,255],np.uint8)
+            elif target == "blue":
+                lower = np.array([100,150,0],np.uint8)
+                upper = np.array([140,255,255],np.uint8)
+                
+            mask = cv2.inRange(hsv, lower, upper)
+            mask = cv2.dilate(mask, None, iterations=1)
+            res = cv2.bitwise_and(inimg, inimg, mask = mask)
+            
+            ### Addition of Distance Detect---------------------------------------------------------------------
+            ### Addition of Distance Detect---------------------------------------------------------------------
+            ### Addition of Distance Detect---------------------------------------------------------------------
+            
+            #-----Image Processing----------------------------------
+            # Also convert it to grayscale for processing:
+            grayImage = cv2.cvtColor(res, cv2.COLOR_BGR2GRAY)
+            # filter noise
+            grayImage = cv2.GaussianBlur(grayImage, (3, 3), 0, 0)
+            # filter noise
+            grayImage = cv2.blur(grayImage, (5, 5))
+            # apply automatic threshold
+            ret, grayImage = cv2.threshold(grayImage, 127, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+            # background area
+            grayImage = cv2.dilate(grayImage, self.kernel, iterations = 1) #self.morphBNo2)
+            invBack2 = 255 - grayImage
+            
+            #-----Blob Detection--------------------------------------------------------------------------------
+            
+            # blob detection
+            keypoints = self.detector.detect(grayImage)
+            nrOfBlobs = len(keypoints) #number of items in this object
+            
+            # draw keypoints
+            img_with_keypoints = cv2.drawKeypoints(inimg, keypoints, np.array([]), (255, 0, 0),
+                                                  cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)#(B,G,R)
+            # draw coordinate system overlay
+            
+            cv2.line(img_with_keypoints, (0,int(height/2)), (int(width), int(height/2)), (0,0,255), 1) #x line
+            cv2.line(img_with_keypoints, (int(width/2),0), (int(width/2), int(height)), (255,0,0), 1) #y line
+            
+            # text only appears if at least 1 blob is detected
+            if nrOfBlobs > 0:
+                i = 0
+                # Keypoint calculations
+                x = keypoints[i].pt[0]
+                y = keypoints[i].pt[1]
+                x_center = -x + (width/2)      #160 = 1/2 of screen width
+                y_center = y - (height/2)     #120 = 1/2 of screen length
+                
+                area = keypoints[i].size    #Pixel area and distance are inversely related
+                dist = ((1/area)*1000)-2        # Still needs conversion rate
                 color_cntrl = 255
                 
-            cv2.putText(img_with_keypoints, "Dist: {} cm".format(int(dist)),  (10, 25), cv2.FONT_HERSHEY_PLAIN,
-                        1, (0, 255, color_cntrl, color_cntrl))
-            cv2.putText(img_with_keypoints, "X: {}".format(int(x_center)), (10, 35), cv2.FONT_HERSHEY_PLAIN,
-                        .75, (0, 255, color_cntrl, color_cntrl))
-            cv2.putText(img_with_keypoints, "Y: {}".format(int(y_center)), (10, 45), cv2.FONT_HERSHEY_PLAIN,
-                        .75, (0, 255, color_cntrl, color_cntrl))
-                        
-        ### Addition of Distance Detect---------------------------------------------------------------------
-        ### Addition of Distance Detect---------------------------------------------------------------------
-        ### Addition of Distance Detect---------------------------------------------------------------------
-        
-        # setting up 4-panel display
-        #vertstack1 = np.vstack((inimg, hsv))
-        #vertstack2 = np.vstack((img_with_keypoints, res))
-        quadstack = np.hstack((img_with_keypoints, res))
-        outimg = quadstack
-        
-        # Write panel labels:
-        cv2.putText(outimg, "Target Detect", (205, 30), cv2.FONT_HERSHEY_DUPLEX, 0.5, (255,255,255))
-        cv2.putText(outimg, "Color Mask", (540, 30), cv2.FONT_HERSHEY_DUPLEX, 0.5, (255,255,255))
-        #cv2.putText(outimg, "blur", (3, 280), cv2.FONT_HERSHEY_DUPLEX, 1, (255,255,255))
-        #cv2.putText(outimg, "Color Mask", (340, 280), cv2.FONT_HERSHEY_DUPLEX, 1, (255,255,255))
-        # Write frames/s info from our timer into the edge map (NOTE: does not account for output conversion time):
-        fps = self.timer.stop()
-        height = outimg.shape[0]
-        width = outimg.shape[1]
-        cv2.putText(outimg, fps, (325, height - 6), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255))
-        
-        # Convert our output image to video output format and send to host over USB:
-        outframe.sendCv(outimg)
+                #-----On Screen Text----------------------------------
+                if int(x_center) == 0 and int(y_center) == 0 :
+                    cv2.putText(img_with_keypoints, "Centered!".format(int(dist)),  (10, 55), cv2.FONT_HERSHEY_PLAIN,.75, (0, 255, 0, 0))
+                    cv2.line(img_with_keypoints, (0,int(height/2)), (int(width), int(height/2)), (0,255,0), 2) #x line
+                    cv2.line(img_with_keypoints, (int(width/2),0), (int(width/2), int(height)), (0,255,0), 2) #y line
+                    color_cntrl = 0
+                else:
+                    color_cntrl = 255
+                    
+                cv2.putText(img_with_keypoints, "Dist: {} cm".format(int(dist)),  (10, 25), cv2.FONT_HERSHEY_PLAIN,
+                            1, (0, 255, color_cntrl, color_cntrl))
+                cv2.putText(img_with_keypoints, "X: {}".format(int(x_center)), (10, 35), cv2.FONT_HERSHEY_PLAIN,
+                            .75, (0, 255, color_cntrl, color_cntrl))
+                cv2.putText(img_with_keypoints, "Y: {}".format(int(y_center)), (10, 45), cv2.FONT_HERSHEY_PLAIN,
+                            .75, (0, 255, color_cntrl, color_cntrl))
+                            
+            ### Addition of Distance Detect---------------------------------------------------------------------
+            ### Addition of Distance Detect---------------------------------------------------------------------
+            ### Addition of Distance Detect---------------------------------------------------------------------
+            
+            # setting up 4-panel display
+            #vertstack1 = np.vstack((inimg, hsv))
+            #vertstack2 = np.vstack((img_with_keypoints, res))
+            quadstack = np.hstack((img_with_keypoints, res))
+            outimg = quadstack
+            
+            # Write panel labels:
+            cv2.putText(outimg, "Target Detect", (205, 30), cv2.FONT_HERSHEY_DUPLEX, 0.5, (255,255,255))
+            cv2.putText(outimg, "Color Mask", (540, 30), cv2.FONT_HERSHEY_DUPLEX, 0.5, (255,255,255))
+            #cv2.putText(outimg, "blur", (3, 280), cv2.FONT_HERSHEY_DUPLEX, 1, (255,255,255))
+            #cv2.putText(outimg, "Color Mask", (340, 280), cv2.FONT_HERSHEY_DUPLEX, 1, (255,255,255))
+            # Write frames/s info from our timer into the edge map (NOTE: does not account for output conversion time):
+            fps = self.timer.stop()
+            height = outimg.shape[0]
+            width = outimg.shape[1]
+            cv2.putText(outimg, fps, (325, height - 6), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255))
+            
+            # Convert our output image to video output format and send to host over USB:
+            outframe.sendCv(outimg)
+        #else:
+            #state = "calibration"
         
     # ###################################################################################################
     ## Process function with no USB output
@@ -208,6 +392,8 @@ class ContinuumRoboticsMasterModule:
     def supportedCommands(self):
         # use \n seperator if your module supports several commands
         return '''
+        # Color selection
+        
         hello - print hello using python
         
         red - Jevois will search for red objects
@@ -216,4 +402,13 @@ class ContinuumRoboticsMasterModule:
         
         blue - Jevois will search for blue object
         
+        # State mode selection
+        
+        calibration - Jevois will run calibration algorithm
+        
+        obstacle - Jevois will search for obstacle and return estimated location
+        
+        target - Jevois will search for color designated target and return estimated location
+        
+        confirmation - Jevois will confirm capture of target
        '''
