@@ -1,0 +1,118 @@
+import serial
+import time
+
+from gpiozero import LED, Button
+
+led = LED(17)
+button = Button(27)
+
+ser = serial.Serial(
+    port='/dev/serial0',
+    baudrate = 9600,
+    parity=serial.PARITY_NONE,
+    stopbits=serial.STOPBITS_ONE,
+    bytesize=serial.EIGHTBITS,
+    timeout=1
+)
+counter = 0
+
+#camera.set(3,320)
+#camera.set(4,240)
+#camera.set(5,30)
+
+state = 0
+i = 1
+timer = 0
+timer = time.monotonic()
+delay = 0.5
+count = 1
+
+print("Start-up Sequence")
+
+def send_command(cmd):
+     #print("HOST>> " + cmd)
+     ser.write((cmd + '\n').encode())
+     #out = ''
+     time.sleep(1)
+     print('Message sent to Jevois!')
+     #while ser.inWaiting() > 0:
+     #    out += ser.read(1)
+     #if out != '':
+     #    print("JEVOIS>> " + out,) # the final comma suppresses extra newline, since JeVois already sends one
+
+while True:
+    while state == 0:
+        led.off()
+        #Switch to Mode: Distance Measure (0)
+        #camera.set(3,320) #width
+        #camera.set(4,240) #length
+        #camera.set(5,30)  #resolution
+        
+        ser.flushInput()
+        interval = time.monotonic()-timer
+        if interval > delay:
+            serialread = ser.readline().rstrip().decode('utf8')
+            data_list = serialread.split('x')
+            list_check = str(data_list)
+            no = "['']"
+            
+#             if (count % 2) == 0:
+#                 ser.write("green")
+#             else:
+#                 ser.write("red")
+                
+            
+            if list_check != no:
+                #using map() to turn string array into int array
+                data_list = list(map(int, data_list))
+                x = data_list[0]
+                y = data_list[1]
+                
+                print ('X coordinate: {} | Y coordinate: {}'.format(x,y))
+
+                i = i+1
+                timer = time.monotonic()
+                
+                if x and y == 0:
+                    state = 1
+                    
+                    
+    # State 2 begins here            
+    if state == 1:
+        led.on()
+        print("\r\nCamera has been calibrated!")
+        print("Camera has been calibrated!")
+        print("Camera has been calibrated!")
+        
+        cmd = input("What color?: ")
+        send_command(cmd)
+#         serialcmd = input("What's next?: ")
+#         #ser.write('red'.encode())
+#         ser.write((serialcmd + '\n').encode())
+#         print('Message sent to Jevois!')
+#         time.sleep(1)
+        
+        
+#     if button.is_pressed:
+#         print("Restart!")
+#         state = 0
+            
+        
+        #Switch to Mode: Hello (1)
+        #camera.set(3,320)
+        #camera.set(4,240)
+        #camera.set(5,29)
+        
+    #if state == 2:
+        #Switch to Mode: 2
+        #camera.set(3,320)
+        #camera.set(4,240)
+        #camera.set(5,30)
+        
+    #if state == 3:
+        #Switch to Mode: 3
+        #camera.set(3,320)
+        #camera.set(4,240)
+        #camera.set(5,30)
+    
+
