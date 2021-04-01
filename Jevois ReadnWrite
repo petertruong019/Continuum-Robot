@@ -1,11 +1,12 @@
 import serial
 import time
-
 from gpiozero import LED, Button
-
 led = LED(17)
 button = Button(27)
 
+print("Initializing...")
+
+#Serial communication initialization
 ser = serial.Serial(
     port='/dev/serial0',
     baudrate = 9600,
@@ -16,10 +17,7 @@ ser = serial.Serial(
 )
 counter = 0
 
-#camera.set(3,320)
-#camera.set(4,240)
-#camera.set(5,30)
-
+#Variable initialization
 state = 0
 i = 1
 timer = 0
@@ -27,8 +25,7 @@ timer = time.monotonic()
 delay = 0.5
 count = 1
 
-print("Start-up Sequence")
-
+#Function Initialization
 def send_command(cmd):
      #print("HOST>> " + cmd)
      ser.write((cmd + '\n').encode())
@@ -39,14 +36,32 @@ def send_command(cmd):
      #    out += ser.read(1)
      #if out != '':
      #    print("JEVOIS>> " + out,) # the final comma suppresses extra newline, since JeVois already sends one
+def promptmode():
+    print('''
+    Computer Vision modes:
+    >>calibration - Fiducial calibration
+    >>obstacle - Obstacle avoidane/navigation
+    >>target - Target detection + Colormask
+    ''')
+    cmd = input("What mode to start with?: ")
+    send_command(cmd)    
+def promptcolor():
+    print('''    
+    Colormask mode commands:
+    >>red
+    >>green
+    >>blue
+    ''')
+    cmd = input("What mode to start with?: ")
+    send_command(cmd)
+    
+#User determined start point    
+promptmode()  #prompt the user of which CV mode to start in
+promptcolor() #prompt the user of which color to search for
 
+#Main function
 while True:
     while state == 0:
-        led.off()
-        #Switch to Mode: Distance Measure (0)
-        #camera.set(3,320) #width
-        #camera.set(4,240) #length
-        #camera.set(5,30)  #resolution
         
         ser.flushInput()
         interval = time.monotonic()-timer
@@ -55,12 +70,6 @@ while True:
             data_list = serialread.split('x')
             list_check = str(data_list)
             no = "['']"
-            
-#             if (count % 2) == 0:
-#                 ser.write("green")
-#             else:
-#                 ser.write("red")
-                
             
             if list_check != no:
                 #using map() to turn string array into int array
@@ -84,13 +93,8 @@ while True:
         print("Camera has been calibrated!")
         print("Camera has been calibrated!")
         
-        cmd = input("What color?: ")
-        send_command(cmd)
-#         serialcmd = input("What's next?: ")
-#         #ser.write('red'.encode())
-#         ser.write((serialcmd + '\n').encode())
-#         print('Message sent to Jevois!')
-#         time.sleep(1)
+        promptmode()  #prompt the user of which CV mode to start in
+        promptcolor() #prompt the user of which color to search for
         
         
 #     if button.is_pressed:
@@ -115,4 +119,3 @@ while True:
         #camera.set(4,240)
         #camera.set(5,30)
     
-
