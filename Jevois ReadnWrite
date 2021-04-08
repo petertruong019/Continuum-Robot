@@ -9,7 +9,7 @@ print("Initializing...")
 #Serial communication initialization
 ser = serial.Serial(
     port='/dev/serial0',
-    baudrate = 9600,
+    baudrate = 115200,
     parity=serial.PARITY_NONE,
     stopbits=serial.STOPBITS_ONE,
     bytesize=serial.EIGHTBITS,
@@ -82,8 +82,8 @@ while True:
                 i = i+1
                 timer = time.monotonic()
                 
-                if x and y == 0:
-                    state = 1
+                #if x and y == 0:
+                #    state = 1
                     
                     
     # State 2 begins here            
@@ -119,3 +119,5 @@ while True:
         #camera.set(4,240)
         #camera.set(5,30)
     
+
+
