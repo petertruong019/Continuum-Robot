@@ -359,8 +359,25 @@ class ContinuumRoboticsMasterModule:
             
             # Convert our output image to video output format and send to host over USB:
             outframe.sendCv(outimg)
-        #else:
-            #state = "calibration"
+            
+            
+            
+            try:
+                dist
+                x_center
+                y_center
+            except NameError:
+                print("WELL WELL. These were not defined after all")
+                #jevois.sendSerial('Target Not recognized')
+            else:
+                print("These are defined and ready to go!")
+            
+                #conv_dist = str(int(dist))
+                conv_x = (int(x_center))
+                conv_y = (int(y_center))
+                #datasend = [conv_dist,conv_x,conv_y]
+                
+                jevois.sendSerial('{}x{}'.format(conv_x,conv_y))
         
     # ###################################################################################################
     ## Process function with no USB output
@@ -375,7 +392,7 @@ class ContinuumRoboticsMasterModule:
         # Start measuring image processing time (NOTE: does not account for input conversion time):
         self.timer.start()
         
-        jevois.LINFO("Processing video frame {} now...".format(self.frame))
+        #jevois.LINFO("Processing video frame {} now...".format(self.frame))
 
         # TODO: you should implement some processing.
         # Once you have some results, send serial output messages:
