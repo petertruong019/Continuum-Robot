@@ -4,18 +4,21 @@
 // Revision 3: Added Serial communication which allows user to type in their desired position typing
 //             "<P1nnnn>". No Speed though
 // ----------------------------------------------------------------------
-#define IN1 34 //DC motor 1
-#define IN2 35 //DC motor 1
-#define PWM1 44 //DC motor 1 speed
+#include "PID_v1.h"
+#include "PinChangeInt.h"
+#define IN1 35 //DC motor 1
+#define IN2 34 //DC motor 1
+#define PWM1 7 //DC motor 1 speed
 
 #define IN3 33 //DC motor 2
 #define IN4 32 //DC motor 2
-#define PWM2 45 // DC motor 2 speed
+#define PWM2 6 // DC motor 2 speed
 
 #define ENCA1 2 //interrupt pin
 #define ENCB1 4 
 #define ENCA2 3 //interrupt pin
 #define ENCB2 5 
+
 
 int pos1 = 0;
 int pos2 = 0;
@@ -35,20 +38,28 @@ char ReceivedChars[numChars];
 char rc;
 static byte index = 0;
 
+int e1;
+int e2;
 
 // ----------------------------------------------- DC MOTOR-RELATED VARIABLES --------------------------------------------------------
 float DCMotorPosition1 = 0.0;
 float DCMotorPosition2 = 0.0;
+float AssignedKp = 0.0;
+float AssignedKd = 0.0;
+float AssignedKi = 0.0;
 
 String StrDCMotorPosition1;
 String StrDCMotorPosition2;
-
+String StrAssignedKp;
+String StrAssignedKd;
+String StrAssignedKi;
 boolean MotorPositionCondition1 = false;
 boolean MotorPositionCondition2 = false;
 
 // -----------------------------------------------------------------------------------------------------------------
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
+  TCCR4B = TCCR4B & B11111000 | B00000001;
   pinMode(ENCA1, INPUT);
   pinMode(ENCB1, INPUT);
   pinMode(IN1, OUTPUT);
@@ -102,87 +113,7 @@ void loop()
       F_ReceiveSerialMessage();
     }
     F_PrintReceiveSerialMessage();
-
-// set target position
-  int target1 = DCMotorPosition1;
-  int target2 = DCMotorPosition2;
-  //int target1 = 1000*sin(prevT1/1e6);
-  //int target2 = 1000*sin(prevT2/1e6);
-  //PID GAINS FOR MOTOR 1 (STEP FUNCTIONS - SPEED > 1000)
-  float kp1 = .3850; 
-  float kd1 = 0.019;
-  float ki1 = 0;
-  //PID GAINS FOR MOTOR 2 (STEP FUNCTIONS - SPEED > 1000)
-  float kp2 = .335;
-  float kd2 = 0.01;
-  float ki2 = 0;
-  //PID GAINS FOR MOTOR 1 (STEP FUNCTIONS - SPEED < 1000)
-  //float kp1 = 1.25;
-  //float kd1 = 0.02;
-  //float ki1 = 0;
-  //PID GAINS FOR MOTOR 2 (STEP FUNCTIONS - SPEED < 1000)
-  //float kp2 = 1.125;
-  //float kd2 = 0.01;
-  //float ki2 = 0; 
-  //float kp1 = 1.55; 
-  //float kd1 = .01;
-  //float ki1 = 0.0; 
-  //float kp2 = 1.55; 
-  //float kd2 = 0.01;
-  //float ki2 = 0.0; 
-  // TIME DIFFERENCE -----------------------------------------------
-  long currT1 = micros();
-  long currT2 = micros();
-  float deltaT1 = ((float) (currT1 - prevT1))/( 1.0e6 );
-  float deltaT2 = ((float) (currT2 - prevT2))/( 1.0e6 );
-  prevT1 = currT1;
-  prevT2 = currT2;
-  // ERROR --------------------------------------------------------
-  int e1 = pos1-target1;  
-  int e2 = pos2-target2; 
-  // DERIVATIVE ---------------------------------------------------
-  float dedt1 = (e1-eprev1)/(deltaT1);
-  float dedt2 = (e2-eprev2)/(deltaT2);
-  // INTEGRAL ------------------------------------------------------
-  eintegral1 = eintegral1 + e1*deltaT1;
-  eintegral2 = eintegral2 + e2*deltaT2;
-  // CONTROL SIGNAL EQUATION ---------------------------------------
-  float u1 = kp1*e1 + kd1*dedt1 + ki1*eintegral1;
-  float u2 = kp2*e2 + kd2*dedt2 + ki2*eintegral2;
-  // MOTOR POWER (AKA MAX SPEED) ---------------------------------------
-  float pwr1 = fabs(u1);
-  float pwr2 = fabs(u2);
-  if( pwr1 > 255 ){
-    pwr1 = 255;
-  }
-  if( pwr2 > 255 ){
-    pwr2 = 255;
-  }
-  // MOTOR DIRECTION -------------------------------------------------
-  int dir1 = 1;
-  int dir2 = 1;
-  if(u1<0){
-    dir1 = -1;
-  }
-  if(u2<0){
-    dir2 = -1;
-  }
-  // ASSIGN SIGNAL TO MOTORS -----------------------------------------
-  setMotor1(dir1,pwr1,PWM1,IN1,IN2);
-  setMotor2(dir2,pwr2,PWM2,IN3,IN4);
-  // STORE PREVIOUS ERROR ---------------------------------------------
-  eprev1 = e1;
-  eprev2 = e2;
-
-  Serial.print(target1);
-  Serial.print(" ");
-  Serial.print(target2);
-  Serial.print(" ");
-  Serial.print(pos1);
-  Serial.print(" ");
-  Serial.print(pos2);
-  Serial.println();
-  delay(10);
+    F_RunPID();
   
 }
 
@@ -293,7 +224,103 @@ void F_CheckSerialProtocol()
             DCMotorPosition2 = StrDCMotorPosition2.toInt();
             MotorPositionCondition2 = true;
           }
-
-
+          else if (ReceivedChars[0] == 'k' && ReceivedChars[1] == 'p')
+          {
+            StrAssignedKp = ReceivedChars;
+            StrAssignedKp.remove(0,2);
+            AssignedKp = StrAssignedKp.toInt();
+            
+          }
+          else if (ReceivedChars[0] == 'k' && ReceivedChars[1] == 'd')
+          {
+            StrAssignedKd = ReceivedChars;
+            StrAssignedKd.remove(0,2);
+            AssignedKd = StrAssignedKd.toInt();
+            
+          }
+          else if (ReceivedChars[0] == 'k' && ReceivedChars[1] == 'i')
+          {
+            StrAssignedKi = ReceivedChars;
+            StrAssignedKi.remove(0,2);
+            AssignedKi = StrAssignedKi.toInt();
+            
+          }
           
+}
+
+void F_RunPID()
+{
+  
+  // set target position
+  int target1 = DCMotorPosition1;
+  int target2 = DCMotorPosition2;
+  //int target1 = 1000*sin(prevT1/1e6);
+  //int target2 = 1000*sin(prevT2/1e6);
+  //PID GAINS FOR MOTOR 1 
+  //float kp1 = 132;
+  //float kd1 = .775;
+  //float ki1 = 0;
+  float kp1 = 167.5;
+  float kd1 = 1.25;
+  float ki1 = 0;
+  
+  //PID GAINS FOR MOTOR 2 
+  float kp2 = 0;
+  float kd2 = 0;
+  float ki2 = 0;
+  
+  // TIME DIFFERENCE -----------------------------------------------
+  long currT1 = micros();
+  long currT2 = micros();
+  float deltaT1 = ((float) (currT1 - prevT1))/( 1.0e6 );
+  float deltaT2 = ((float) (currT2 - prevT2))/( 1.0e6 );
+  prevT1 = currT1;
+  prevT2 = currT2;
+  // ERROR ---------------------------------------------------------
+  int e1 = pos1-target1;  
+  int e2 = pos2-target2; 
+  // DERIVATIVE ----------------------------------------------------
+  float dedt1 = (e1-eprev1)/(deltaT1);
+  float dedt2 = (e2-eprev2)/(deltaT2);
+  // INTEGRAL ------------------------------------------------------
+  eintegral1 = eintegral1 + e1*deltaT1;
+  eintegral2 = eintegral2 + e2*deltaT2;
+  // CONTROL SIGNAL EQUATION ---------------------------------------
+  float u1 = kp1*e1 + kd1*dedt1 + ki1*eintegral1;
+  float u2 = kp2*e2 + kd2*dedt2 + ki2*eintegral2;
+  // MOTOR POWER (AKA MAX SPEED) -----------------------------------
+  float pwr1 = fabs(u1);
+  float pwr2 = fabs(u2);
+  if( pwr1 > 255 ){
+    pwr1 = 255;
+  }
+  if( pwr2 > 255 ){
+    pwr2 = 255;
+  }
+  // MOTOR DIRECTION -----------------------------------------------
+  int dir1 = 1;
+  int dir2 = 1;
+  if(u1<0){
+    dir1 = -1;
+  }
+  if(u2<0){
+    dir2 = -1;
+  }
+  // ASSIGN SIGNAL TO MOTORS ---------------------------------------
+  setMotor1(dir1,pwr1,PWM1,IN1,IN2);
+  setMotor2(dir2,pwr2,PWM2,IN3,IN4);
+  // STORE PREVIOUS ERROR ------------------------------------------
+  eprev1 = e1;
+  eprev2 = e2;
+  
+  Serial.print(target1);
+  Serial.print(" ");
+  Serial.print(target2);
+  Serial.print(" ");
+  Serial.print(pos1);
+  Serial.print(" ");
+  Serial.print(pos2);
+  Serial.println();
+  
+  
 }
