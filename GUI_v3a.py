@@ -267,32 +267,92 @@ close_manual = Button(manual_mode_frame, text = 'X',
 close_manual.place(relx = close_tab_relx,
                    relheight = close_rel_height, relwidth = close_rel_width)
 
-# MOTOR CONTROL, a stands for arduino
-ac1_relx = 0.1        # column 1: position
-ac2_relx = 0.45       # column 2: speed 
-ar3_relx = 0.2
+# add a label that summarizes each mode?
 
-ar2_rely = 0.15       # row 1: motor 1 info
-ar3_rely = 0.3        # row 2: motor 2 info
-ar1_rely = 0.5 
+# MOTOR CONTROL, a stands for arduino
+ac1_relx = 0.1        # column 1: motor labels
+ac2_relx = 0.3        # column 2: input position change
+ac3_relx = 0.5        # column 3: current position labels
+ac4_relx = 0.7        # column 4: encoder feedback
+
+ar1_rely = 0.1        # enter position / new position / encoder feedback
+ar2_rely = 0.225      # row 1: motor 1 info
+ar3_rely = 0.35       # row 2: motor 2 info
+ar4_rely = 0.475
+  
 
 ac0_relwidth = 0.15   # only column 1 has a different relwidth
-a_relheight = 0.1
-a_relwidth = 0.2
+a_relheight = 0.075   # everything has the same height
+a_relwidth = 0.15      # everything has the same width
 
-motor1_label = tk.Label(manual_mode_frame, text = 'motor 1:', font = myFont)
-motor1_label.place(relx = ac1_relx, rely = ar2_rely, 
-                   relwidth = ac0_relwidth, relheight = a_relheight)
-
-motor2_label = tk.Label(manual_mode_frame, text = 'motor 2:', font = myFont)
-motor2_label.place(relx = ac1_relx, rely = ar3_rely, 
-                   relwidth = ac0_relwidth, relheight = a_relheight)
-
-position_label = tk.Label(manual_mode_frame, text = 'position (steps)', font = myFont)
+position_label = Label(manual_mode_frame, text = 'position (pulses)', font = myFont)
 position_label.place(relx = ac2_relx, rely = ar1_rely, 
                      relwidth = a_relwidth, relheight = a_relheight)
 
-# add a label that summarizes each mode?
+current_position_label = Label(manual_mode_frame, text = 'current position', font = myFont)
+current_position_label.place(relx = ac3_relx, rely = ar1_rely,
+                             relwidth = a_relwidth, relheight = a_relheight)
+
+encoder_label = Label(manual_mode_frame, text = 'encoder feedback', font = myFont)
+
+encoder_label.place(relx = ac4_relx, rely = ar1_rely, 
+                    relwidth = a_relwidth, relheight = a_relheight)
+
+motor1_label = Label(manual_mode_frame, text = 'motor 1:', font = myFont)
+motor1_label.place(relx = ac1_relx, rely = ar2_rely, 
+                   relwidth = ac0_relwidth, relheight = a_relheight)
+
+motor2_label = Label(manual_mode_frame, text = 'motor 2:', font = myFont)
+motor2_label.place(relx = ac1_relx, rely = ar3_rely, 
+                   relwidth = ac0_relwidth, relheight = a_relheight)
+
+position_motor1_txt = StringVar()
+position_motor1_txt.set('')
+position_motor2_txt = StringVar()
+position_motor2_txt.set('')
+
+enter_position_motor1 = Entry(manual_mode_frame, textvariable = position_motor1_txt)
+enter_position_motor1.place(relx = ac2_relx, rely = ar2_rely, 
+                            relwidth = a_relwidth, relheight = a_relheight)
+
+enter_position_motor2 = Entry(manual_mode_frame, textvariable = position_motor2_txt)
+enter_position_motor2.place(relx = ac2_relx, rely = ar3_rely,
+                            relwidth = a_relwidth, relheight = a_relheight)
+
+position_motor1_txt.trace("w",lambda *args: print (position_motor1_txt.get()))
+position_motor2_txt.trace("w",lambda *args: print (position_motor2_txt.get()))
+
+current_position_motor1 = tk.Label(manual_mode_frame, textvariable = position_motor1_txt, 
+                                   font = myFont, bg = 'white')
+current_position_motor1.place(relx = ac3_relx, rely = ar2_rely, 
+                              relwidth = a_relwidth, relheight = a_relheight)
+
+current_position_motor2 = tk.Label(manual_mode_frame, textvariable = position_motor2_txt, 
+                                   font = myFont, bg = 'white')
+current_position_motor2.place(relx = ac3_relx, rely = ar3_rely, 
+                              relwidth = a_relwidth, relheight = a_relheight)
+
+encoder1_label = tk.Label(manual_mode_frame, font = myFont, bg = 'white')
+                      #command = lambda: send_to_jevois_program('obstacle'))
+encoder1_label.place(relx = ac4_relx, rely = ar2_rely, 
+                     relwidth = a_relwidth, relheight = a_relheight)
+
+encoder2_label = tk.Label(manual_mode_frame, font = myFont, bg = 'white')
+                      #command = lambda: send_to_jevois_program('obstacle'))
+encoder2_label.place(relx = ac4_relx, rely = ar3_rely, 
+                     relwidth = a_relwidth, relheight = a_relheight)
+
+run_button = Button(manual_mode_frame, text = "Run",
+                    bg = 'green', font = myFont)
+                      #command = lambda: send_to_jevois_program('obstacle'))
+run_button.place (relx = 0.5, rely = ar4_rely, 
+                  anchor = 'n',
+                  relwidth = a_relwidth, relheight = a_relheight)
+
+manual_exit_gui_button = tk.Button(manual_mode_frame, text = "Exit GUI", 
+                                   command = close_window)
+manual_exit_gui_button.place(rely = 0.9,
+                             relwidth = 0.2, relheight = 0.1)
 
 # OBJECT TRACING TAB #
 object_title = Label(object_tracing_mode_frame, text = 'Object Tracing Mode',
@@ -307,6 +367,11 @@ close_obj_tracing = Button(object_tracing_mode_frame, text = 'X',
 close_obj_tracing.place(relx = close_tab_relx,
                         relheight = close_rel_height, relwidth = close_rel_width)
 
+object_exit_gui_button = tk.Button(object_tracing_mode_frame, text = "Exit GUI", 
+                                   command = close_window)
+object_exit_gui_button.place(rely = 0.9,
+                             relwidth = 0.2, relheight = 0.1)
+
 # PATTERN TAB #
 pattern_title = Label(pattern_mode_frame, text = 'Pattern Mode',
                      font = myFont, bg = 'white')
@@ -319,6 +384,11 @@ close_pattern = Button(pattern_mode_frame, text = 'X',
                        command = lambda: close_tab(3))
 close_pattern.place(relx = close_tab_relx,
                     relheight = close_rel_height, relwidth = close_rel_width)
+
+pattern_exit_gui_button = tk.Button(pattern_mode_frame, text = "Exit GUI", 
+                                   command = close_window)
+pattern_exit_gui_button.place(rely = 0.9,
+                             relwidth = 0.2, relheight = 0.1)
 
 '''
 start_button = Button(root, text = 'Display IMU Reading',
@@ -426,19 +496,6 @@ speed_warning_label = tk.Label (middle_frame, text = 'warning: do not exceed 200
 speed_warning_label.place(rely = ar6_rely, 
                           relwidth = warning_relwidth, relheight = a_relheight)
 
-encoder_label = tk.Label(middle_frame, text = 'encoder feedback', font = myFont)
-encoder_label.place(relx = ac3_relx, rely = ar1_rely, 
-                    relwidth = a_relwidth, relheight = a_relheight)
-
-
-
-motor1_position_entry = tk.Entry(middle_frame)
-motor1_position_entry.place(relx = ac1_relx, rely = ar2_rely, 
-                            relwidth = a_relwidth, relheight = a_relheight)
-
-motor2_position_entry = tk.Entry(middle_frame)
-motor2_position_entry.place(relx = ac1_relx, rely = ar3_rely,
-                            relwidth = a_relwidth, relheight = a_relheight)
 
 motor1_speed_entry = tk.Entry(middle_frame)
 motor1_speed_entry.place(relx = ac2_relx, rely = ar2_rely, 
@@ -448,13 +505,6 @@ motor2_speed_entry = tk.Entry(middle_frame)
 motor2_speed_entry.place(relx = ac2_relx, rely = ar3_rely, 
                          relwidth = a_relwidth, relheight = a_relheight)
 
-encoder1_label = tk.Label(middle_frame, font = myFont, bg = 'white')
-encoder1_label.place(relx = ac3_relx, rely = ar2_rely, 
-                     relwidth = a_relwidth, relheight = a_relheight)
-
-encoder2_label = tk.Label(middle_frame, font = myFont, bg = 'white')
-encoder2_label.place(relx = ac3_relx, rely = ar3_rely, 
-                     relwidth = a_relwidth, relheight = a_relheight)
 
 stepper_enable_button = Button(middle_frame, text = 'Stepper Motors Disabled!', 
                                bg = 'red', font = myFont)
@@ -462,10 +512,7 @@ stepper_enable_button = Button(middle_frame, text = 'Stepper Motors Disabled!',
 stepper_enable_button.place(relx = stepper_enable_relx, rely = ar6_rely, 
                             relwidth = a_relwidth, relheight = a_relheight)
 
-run_button = Button(middle_frame, text = "Run",
-                    bg = 'green', font = myFont)
-run_button.place (relx = run_relx, rely = ar6_rely, 
-                  relwidth = run_relwidth, relheight = a_relheight)
+
 
 ## IMU Readings ##
 imu_label = tk.Label(lower_frame, text = 'IMU Readings',
