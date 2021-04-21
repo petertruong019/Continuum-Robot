@@ -50,7 +50,7 @@ blossom_mpu6050 = MPU6050(board.I2C())           # base accel & gyro sensor
 # ser2 = serial.Serial(port = com_port2, baudrate = arduino_baudrate, timeout = 0)    # my port = '/dev/ttyACM0'
 
 ### GUI DEFINITIONS ###
-HEIGHT = 700   # pixels
+HEIGHT = 500   # pixels
 WIDTH = 1300
 
 root = Tk()                                      # create Tkinter root
@@ -67,28 +67,35 @@ myFont = tkinter.font.Font(family = 'Helvetica',
                            weight = "bold")
 
 # define what is inside the tabs using frames
-mode_selection_frame = Frame(my_notebook, bd = 10,
-                             width = HEIGHT, height = WIDTH, 
+mode_selection_tab = Frame(my_notebook, bd = 10,
+                             width = WIDTH, height = HEIGHT, 
                              bg = '#80c1ff')
-manual_mode_frame = Frame(my_notebook, bd = 10,
-                          width = HEIGHT, height = WIDTH, 
+manual_tab = Frame(my_notebook, bd = 10,
+                          width = WIDTH, height = HEIGHT, 
                           bg = '#80c1ff')
-object_tracing_mode_frame = Frame(my_notebook, bd = 10,
-                                  width = HEIGHT, height = WIDTH,
+object_tracing_tab = Frame(my_notebook, bd = 10,
+                                  width = WIDTH, height = HEIGHT,
                                   bg = '#80c1ff')
-pattern_mode_frame = Frame(my_notebook, bd = 10,
-                           width = HEIGHT, height = WIDTH,
+pattern_tab= Frame(my_notebook, bd = 10,
+                           width = WIDTH, height = HEIGHT,
                            bg = '#80c1ff')
 
-mode_selection_frame.pack(fill = 'both', expand = 1)
-manual_mode_frame.pack(fill = 'both', expand = 1)
-object_tracing_mode_frame.pack(fill = 'both', expand = 1)
+# OBJECT TRACING TAB #
+upper_frame = Frame(my_notebook.object_tracing_tab, bg='white', bd=10)  # hexidecimal color, bd = border
+upper_frame.place(relx = 0.5, rely = 0.02, 
+                  relwidth=0.9, relheight=0.2,    # starts at .2, ends at .22
+                  anchor='n') 
+
+
+mode_selection_tab.pack(fill = 'both', expand = 1)
+manual_tab.pack(fill = 'both', expand = 1)
+object_tracing_tab.pack(fill = 'both', expand = 1)
 pattern_mode_frame.pack(fill = 'both', expand = 1)
 
 # designate the tabs
-my_notebook.add(mode_selection_frame, text = 'Mode Selection')
-my_notebook.add(manual_mode_frame, text = 'Manual Mode')
-my_notebook.add(object_tracing_mode_frame, text = 'Object Tracing Mode')
+my_notebook.add(mode_selection_tab, text = 'Mode Selection')
+my_notebook.add(manual_tab, text = 'Manual Mode')
+my_notebook.add(object_tracing_tab, text = 'Object Tracing Mode')
 my_notebook.add(pattern_mode_frame, text = 'Pattern Mode')
 
 # hide the different modes
@@ -199,13 +206,6 @@ def show_tab(mode_frame, mode_selection):
 def close_tab(i_tab):
     my_notebook.hide(i_tab)
     
-### WIDGET FUNCTIONS ###
-def something(RELX, RELY, RELWIDTH, RELHEIGHT):
-    position_label = Label(manual_mode_frame, text = 'position (pulses)', font = myFont)
-    position_label.place(relx = RELX, rely = RELY, 
-                     relwidth = RELWIDTH, relheight = RELHEIGHT)
- 
-    
 ### WIDGETS ###
 # GLOBAL MODE TAB WIDGET SIZING #
 title_rel_height = 0.05
@@ -219,23 +219,23 @@ mode_sel_rely = 0.2
 mode_sel_relheight = 0.05
 mode_sel_relwidth = 0.2
 
-select_mode_label = Label(mode_selection_frame, text = 'Select Control Mode:', 
+select_mode_label = Label(mode_selection_tab, text = 'Select Control Mode:', 
                           font = myFont, bg = 'white')
 select_mode_label.place(relx = 0.5,
                         relheight = title_rel_height, relwidth = title_rel_width,
                         anchor = 'n')
 
-manual_button = Button(mode_selection_frame, text = 'Manual Mode',
+manual_button = Button(mode_selection_tab, text = 'Manual Mode',
                        font = myFont, 
-                       command = lambda: show_tab(manual_mode_frame, 'Manual Mode'))
+                       command = lambda: show_tab(manual_tab, 'Manual Mode'))
 manual_button.place(relx = 0.15, rely = mode_sel_rely,
                     relheight = mode_sel_relheight, relwidth = mode_sel_relwidth)
-object_trace_button = Button(mode_selection_frame, text = 'Object Tracing Mode',
+object_trace_button = Button(mode_selection_tab, text = 'Object Tracing Mode',
                              font = myFont,
-                             command = lambda: show_tab(object_tracing_mode_frame, 'Object Tracing Mode'))
+                             command = lambda: show_tab(object_tracing_tab, 'Object Tracing Mode'))
 object_trace_button.place(relx = 0.4, rely = mode_sel_rely,
                           relheight = mode_sel_relheight, relwidth = mode_sel_relwidth)
-pattern_button = Button(mode_selection_frame, text = 'Pattern Mode',
+pattern_button = Button(mode_selection_tab, text = 'Pattern Mode',
                         font = myFont,
                         command = lambda: show_tab(pattern_mode_frame, 'Pattern Mode'))
 pattern_button.place(relx = 0.65, rely = mode_sel_rely,
@@ -251,7 +251,7 @@ mode_descriptions_text = ('{:<} \n \n {:<} \n \n {:<}'.format(manual_description
 # txt = "We have {:<} chickens."
 # print(txt.format(49))
 
-mode_descriptions = Label(mode_selection_frame, text = mode_descriptions_text,
+mode_descriptions = Label(mode_selection_tab, text = mode_descriptions_text,
                           font = myFont, bg = 'white',
                           anchor = 'w', justify = LEFT,
                           wraplength = 760)
@@ -259,17 +259,17 @@ mode_descriptions.place(relx = 0.5, rely = 0.35,
                         relheight = 0.3, relwidth = title_rel_width,
                         anchor = 'n')
 
-exit_gui_button = tk.Button(mode_selection_frame, text = "Exit GUI", command = close_window)
+exit_gui_button = tk.Button(mode_selection_tab, text = "Exit GUI", command = close_window)
 exit_gui_button.place(rely = 0.9,
                       relheight = 0.1, relwidth = 0.2)
 
 # MANUAL MODE TAB #
-manual_title = Label(manual_mode_frame, text = 'Manual Mode',
+manual_title = Label(manual_tab, text = 'Manual Mode',
                           font = myFont, bg = 'white')
 manual_title.place(relx = 0.5,
                    relheight = title_rel_height, relwidth = title_rel_width,
                    anchor = 'n')
-close_manual = Button(manual_mode_frame, text = 'X',
+close_manual = Button(manual_tab, text = 'X',
                       fg = 'white', bg = 'red',
                       font = myFont,
                       command = lambda: close_tab(1))
@@ -295,25 +295,29 @@ a_relheight = 0.075   # everything has the same height
 a_relwidth = 0.15      # everything has the same width
 
 
-something(ac2_relx, ar1_rely, a_relwidth, a_relheight)
-# position_label = Label(manual_mode_frame, text = 'position (pulses)', font = myFont)
-# position_label.place(relx = ac2_relx, rely = ar1_rely, 
-#                      relwidth = a_relwidth, relheight = a_relheight)
+# Seperator object
+# separator = ttk.Separator(x, orient='vertical')
+# separator.place(relx=0.47, rely=0, relwidth=0.2, relheight=1)
 
-current_position_label = Label(manual_mode_frame, text = 'current position', font = myFont)
+
+position_label = Label(manual_tab, text = 'position (pulses)', font = myFont)
+position_label.place(relx = ac2_relx, rely = ar1_rely, 
+                     relwidth = a_relwidth, relheight = a_relheight)
+
+current_position_label = Label(manual_tab, text = 'current position', font = myFont)
 current_position_label.place(relx = ac3_relx, rely = ar1_rely,
                              relwidth = a_relwidth, relheight = a_relheight)
 
-encoder_label = Label(manual_mode_frame, text = 'encoder feedback', font = myFont)
+encoder_label = Label(manual_tab, text = 'encoder feedback', font = myFont)
 
 encoder_label.place(relx = ac4_relx, rely = ar1_rely, 
                     relwidth = a_relwidth, relheight = a_relheight)
 
-motor1_label = Label(manual_mode_frame, text = 'motor 1:', font = myFont)
+motor1_label = Label(manual_tab, text = 'motor 1:', font = myFont)
 motor1_label.place(relx = ac1_relx, rely = ar2_rely, 
                    relwidth = ac0_relwidth, relheight = a_relheight)
 
-motor2_label = Label(manual_mode_frame, text = 'motor 2:', font = myFont)
+motor2_label = Label(manual_tab, text = 'motor 2:', font = myFont)
 motor2_label.place(relx = ac1_relx, rely = ar3_rely, 
                    relwidth = ac0_relwidth, relheight = a_relheight)
 
@@ -322,63 +326,63 @@ position_motor1_txt.set('')
 position_motor2_txt = StringVar()
 position_motor2_txt.set('')
 
-# enter_position_motor1 = Entry(manual_mode_frame, textvariable = position_motor1_txt)
+# enter_position_motor1 = Entry(manual_tab, textvariable = position_motor1_txt)
 # enter_position_motor1.place(relx = ac2_relx, rely = ar2_rely, 
 #                             relwidth = a_relwidth, relheight = a_relheight)
 
-enter_position_motor2 = Entry(manual_mode_frame, textvariable = position_motor2_txt)
+enter_position_motor2 = Entry(manual_tab, textvariable = position_motor2_txt)
 enter_position_motor2.place(relx = ac2_relx, rely = ar3_rely,
                             relwidth = a_relwidth, relheight = a_relheight)
 
 position_motor1_txt.trace("w",lambda *args: print (position_motor1_txt.get()))
 position_motor2_txt.trace("w",lambda *args: print (position_motor2_txt.get()))
 
-current_position_motor1 = tk.Label(manual_mode_frame, textvariable = position_motor1_txt, 
+current_position_motor1 = tk.Label(manual_tab, textvariable = position_motor1_txt, 
                                    font = myFont, bg = 'white')
 current_position_motor1.place(relx = ac3_relx, rely = ar2_rely, 
                               relwidth = a_relwidth, relheight = a_relheight)
 
-current_position_motor2 = tk.Label(manual_mode_frame, textvariable = position_motor2_txt, 
+current_position_motor2 = tk.Label(manual_tab, textvariable = position_motor2_txt, 
                                    font = myFont, bg = 'white')
 current_position_motor2.place(relx = ac3_relx, rely = ar3_rely, 
                               relwidth = a_relwidth, relheight = a_relheight)
 
-encoder1_label = tk.Label(manual_mode_frame, font = myFont, bg = 'white')
+encoder1_label = tk.Label(manual_tab, font = myFont, bg = 'white')
                       #command = lambda: send_to_jevois_program('obstacle'))
 encoder1_label.place(relx = ac4_relx, rely = ar2_rely, 
                      relwidth = a_relwidth, relheight = a_relheight)
 
-encoder2_label = tk.Label(manual_mode_frame, font = myFont, bg = 'white')
+encoder2_label = tk.Label(manual_tab, font = myFont, bg = 'white')
                       #command = lambda: send_to_jevois_program('obstacle'))
 encoder2_label.place(relx = ac4_relx, rely = ar3_rely, 
                      relwidth = a_relwidth, relheight = a_relheight)
 
-run_button = Button(manual_mode_frame, text = "Run",
+run_button = Button(manual_tab, text = "Run",
                     bg = 'green', font = myFont)
                       #command = lambda: send_to_jevois_program('obstacle'))
 run_button.place (relx = 0.5, rely = ar4_rely, 
                   anchor = 'n',
                   relwidth = a_relwidth, relheight = a_relheight)
 
-manual_exit_gui_button = tk.Button(manual_mode_frame, text = "Exit GUI", 
+manual_exit_gui_button = tk.Button(manual_tab, text = "Exit GUI", 
                                    command = close_window)
 manual_exit_gui_button.place(rely = 0.9,
                              relwidth = 0.2, relheight = 0.1)
 
 # OBJECT TRACING TAB #
-object_title = Label(object_tracing_mode_frame, text = 'Object Tracing Mode',
+object_title = Label(object_tracing_tab, text = 'Object Tracing Mode',
                      font = myFont, bg = 'white')
 object_title.place(relx = 0.5,
                    relheight = title_rel_height, relwidth = title_rel_width,
                    anchor = 'n')
-close_obj_tracing = Button(object_tracing_mode_frame, text = 'X',
+close_obj_tracing = Button(object_tracing_tab, text = 'X',
                            fg = 'white', bg = 'red',
                            font = myFont,
                            command = lambda: close_tab(2))
 close_obj_tracing.place(relx = close_tab_relx,
                         relheight = close_rel_height, relwidth = close_rel_width)
 
-object_exit_gui_button = tk.Button(object_tracing_mode_frame, text = "Exit GUI", 
+object_exit_gui_button = tk.Button(object_tracing_tab, text = "Exit GUI", 
                                    command = close_window)
 object_exit_gui_button.place(rely = 0.9,
                              relwidth = 0.2, relheight = 0.1)
