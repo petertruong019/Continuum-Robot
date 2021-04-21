@@ -17,8 +17,10 @@
 #define ENCB2 5 
 
 
-int pos1 = 0; // This would be the y axis pixels
-int pos2 = 0; // This would be the x axis pixels
+int pos1 = 0; // This would be the y axis 
+int pos2 = 0; // This would be the x axis
+int pixpos1 = 0; // Jevois pixel y-coordinate
+int pixpos2 = 0; // Jevois pixel x-coordinate
 long prevTime1 = 0;
 long prevTime2 = 0;
 float eprev1 = 0;
@@ -38,18 +40,25 @@ static byte index = 0;
 // ----------------------------------------------- DC MOTOR-RELATED VARIABLES --------------------------------------------------------
 float DCMotorPosition1 = 0.0;
 float DCMotorPosition2 = 0.0;
+
 float JevoisXaxis = 0.0;
 float JevoisYaxis = 0.0;
+float IncomingJevoisX = 0.0;
+float IncomingJevoisY = 0.0;
 
 String StrDCMotorPosition1;
 String StrDCMotorPosition2;
 String StrJevoisXaxis;
 String StrJevoisYaxis;
+String StrIncomingJevoisX;
+String StrIncomingJevoisY;
 
 boolean MotorPositionCondition1 = false;
 boolean MotorPositionCondition2 = false;
 boolean JevoisConditionX = false;
 boolean JevoisConditionY = false;
+boolean IncomingJevoisConditionX = false;
+boolean IncomingJevoisConditionY = false;
 // -----------------------------------------------------------------------------------------------------------------
 void setup() {
   Serial.begin(115200);
@@ -89,6 +98,8 @@ void F_RunJevoisPID()
 {
   if (JevoisConditionX == true && JevoisConditionY == true)
     {
+      F_ReadJevoisX();
+      F_ReadJevoisY();
       // set target position
       int target1 = JevoisYaxis;
       int target2 = JevoisXaxis;
@@ -153,6 +164,31 @@ void F_RunJevoisPID()
   
       Serial.print(target1);Serial.print(" ");Serial.print(target2);Serial.print(" ");Serial.print(pos1);Serial.print(" ");Serial.print(pos2);Serial.println();
     }
+}
+
+void F_ReadJevoisX()
+{
+  if(IncomingJevoisX > 0)
+  {
+    pixpos1++;
+  }
+  else
+  {
+    pixpos1--;
+  }
+}
+
+void F_ReadJevoisY()
+{
+  
+  if(IncomingJevoisY > 0)
+  {
+    pixpos2++;
+  }
+  else
+  {
+    pixpos2--;
+  }
 }
 //------------------------------------------------ DC MOTOR PID CONTROL FUNCTIONS ----------------------------------------------------------
 void F_RunDCPID()
@@ -336,19 +372,33 @@ void F_CheckSerialProtocol()
             DCMotorPosition2 = StrDCMotorPosition2.toInt();
             MotorPositionCondition2 = true;
           }
-          else if (ReceivedChars[0] == 'x')
+          else if (ReceivedChars[0] == 'J' && ReceivedChars[1] == 'x')
           {
             StrJevoisXaxis = ReceivedChars;
-            StrJevoisXaxis.remove(0,1);
+            StrJevoisXaxis.remove(0,2);
             JevoisXaxis = StrJevoisXaxis.toInt();
             JevoisConditionX = true;
           }
-          else if (ReceivedChars[0] == 'y')
+          else if (ReceivedChars[0] == 'J' && ReceivedChars[1] == 'y')
           {
             StrJevoisYaxis = ReceivedChars;
-            StrJevoisYaxis.remove(0,1);
+            StrJevoisYaxis.remove(0,2);
             JevoisYaxis = StrJevoisYaxis.toInt();
             JevoisConditionY = true;
+          }
+          else if (ReceivedChars[0] == 'x')
+          {
+            StrIncomingJevoisX = ReceivedChars;
+            StrIncomingJevoisX.remove(0,1);
+            IncomingJevoisX = StrIncomingJevoisX.toInt();
+            IncomingJevoisConditionX = true;
+          }
+          else if (ReceivedChars[0] == 'y')
+          {
+            StrIncomingJevoisY = ReceivedChars;
+            StrIncomingJevoisY.remove(0,1);
+            IncomingJevoisY = StrIncomingJevoisY.toInt();
+            IncomingJevoisConditionY = true;
           }
           NewData = false;
       }
