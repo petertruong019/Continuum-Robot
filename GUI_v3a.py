@@ -50,8 +50,8 @@ blossom_mpu6050 = MPU6050(board.I2C())           # base accel & gyro sensor
 # ser2 = serial.Serial(port = com_port2, baudrate = arduino_baudrate, timeout = 0)    # my port = '/dev/ttyACM0'
 
 ### GUI DEFINITIONS ###
-HEIGHT = 1000   # pixels
-WIDTH = 1100
+HEIGHT = 700   # pixels
+WIDTH = 1300
 
 root = Tk()                                      # create Tkinter root
 root.title("Continuum Robot GUI")
@@ -65,21 +65,6 @@ my_notebook.pack(pady = 0)
 myFont = tkinter.font.Font(family = 'Helvetica',
                            size = 12,
                            weight = "bold")
-
-# upper_frame = tk.Frame(root, bg='#80c1ff', bd=10)  # hexidecimal color, bd = border
-# upper_frame.place(relx = 0.5, rely = 0.02, 
-#                   relwidth=0.9, relheight=0.2,    # starts at .2, ends at .22
-#                   anchor='n') 
-
-# middle_frame = tk.Frame(root, bg='#80c1ff', bd=10)
-# middle_frame.place(relx=0.5, rely = 0.24, 
-#                   relwidth=0.9, relheight=0.44, 
-#                   anchor='n')                          # starts at .24
-
-# lower_frame = tk.Frame(root, bg='#80c1ff', bd=10)
-# lower_frame.place(relx = 0.5, rely=0.7,
-#                   relwidth=0.9, relheight = 0.28,
-#                   anchor='n')                           # end at .98
 
 # define what is inside the tabs using frames
 mode_selection_frame = Frame(my_notebook, bd = 10,
@@ -213,6 +198,12 @@ def show_tab(mode_frame, mode_selection):
     
 def close_tab(i_tab):
     my_notebook.hide(i_tab)
+    
+### WIDGET FUNCTIONS ###
+def something(RELX, RELY, RELWIDTH, RELHEIGHT):
+    position_label = Label(manual_mode_frame, text = 'position (pulses)', font = myFont)
+    position_label.place(relx = RELX, rely = RELY, 
+                     relwidth = RELWIDTH, relheight = RELHEIGHT)
  
     
 ### WIDGETS ###
@@ -250,6 +241,24 @@ pattern_button = Button(mode_selection_frame, text = 'Pattern Mode',
 pattern_button.place(relx = 0.65, rely = mode_sel_rely,
                      relheight = mode_sel_relheight, relwidth = mode_sel_relwidth)
 
+manual_description_text = 'Manual Mode: Control the continuum robot manually by inputting the amount of pulses for the motors to move.'
+object_description_text = 'Object Tracing Mode: <add description later>.'
+pattern_description_text = 'Pattern Tracing Mode: <add description later>.'
+
+mode_descriptions_text = ('{:<} \n \n {:<} \n \n {:<}'.format(manual_description_text, object_description_text, pattern_description_text))
+# mode_descriptions_text = mode_descriptions_text + manual_description_text + object_description_text + pattern_description_text
+
+# txt = "We have {:<} chickens."
+# print(txt.format(49))
+
+mode_descriptions = Label(mode_selection_frame, text = mode_descriptions_text,
+                          font = myFont, bg = 'white',
+                          anchor = 'w', justify = LEFT,
+                          wraplength = 760)
+mode_descriptions.place(relx = 0.5, rely = 0.35,
+                        relheight = 0.3, relwidth = title_rel_width,
+                        anchor = 'n')
+
 exit_gui_button = tk.Button(mode_selection_frame, text = "Exit GUI", command = close_window)
 exit_gui_button.place(rely = 0.9,
                       relheight = 0.1, relwidth = 0.2)
@@ -285,9 +294,11 @@ ac0_relwidth = 0.15   # only column 1 has a different relwidth
 a_relheight = 0.075   # everything has the same height
 a_relwidth = 0.15      # everything has the same width
 
-position_label = Label(manual_mode_frame, text = 'position (pulses)', font = myFont)
-position_label.place(relx = ac2_relx, rely = ar1_rely, 
-                     relwidth = a_relwidth, relheight = a_relheight)
+
+something(ac2_relx, ar1_rely, a_relwidth, a_relheight)
+# position_label = Label(manual_mode_frame, text = 'position (pulses)', font = myFont)
+# position_label.place(relx = ac2_relx, rely = ar1_rely, 
+#                      relwidth = a_relwidth, relheight = a_relheight)
 
 current_position_label = Label(manual_mode_frame, text = 'current position', font = myFont)
 current_position_label.place(relx = ac3_relx, rely = ar1_rely,
@@ -311,9 +322,9 @@ position_motor1_txt.set('')
 position_motor2_txt = StringVar()
 position_motor2_txt.set('')
 
-enter_position_motor1 = Entry(manual_mode_frame, textvariable = position_motor1_txt)
-enter_position_motor1.place(relx = ac2_relx, rely = ar2_rely, 
-                            relwidth = a_relwidth, relheight = a_relheight)
+# enter_position_motor1 = Entry(manual_mode_frame, textvariable = position_motor1_txt)
+# enter_position_motor1.place(relx = ac2_relx, rely = ar2_rely, 
+#                             relwidth = a_relwidth, relheight = a_relheight)
 
 enter_position_motor2 = Entry(manual_mode_frame, textvariable = position_motor2_txt)
 enter_position_motor2.place(relx = ac2_relx, rely = ar3_rely,

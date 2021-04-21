@@ -99,6 +99,9 @@ def send_to_jevois_program(cmd):
 def move_motors(x, y):
     global newx_position, newy_position
     
+    x_to_arduino = '<x{}>'.format(x)
+    y_to_arduino = '<y{}>'.format(y)
+    
     pulse_position1 = str(x*2 + int(newx_position))
     pulse_position2 = str(y*2 + int(newy_position))
     
